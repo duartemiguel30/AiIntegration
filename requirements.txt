@@ -1,0 +1,9 @@
+google-genai
+mcp
+requests
+python-dotenv
+fastapi
+uvicorn
+sqlalchemy
+apscheduler
+slowapi

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Intelligence Aggregator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 2rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; color: #f8fafc; }
+    p.sub { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem; }
+    .filters { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    select, input { background: #1e2330; border: 1px solid #2d3748; color: #e2e8f0; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.875rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    thead { background: #1e2330; }
+    th { text-align: left; padding: 0.65rem 1rem; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #2d3748; }
+    td { padding: 0.65rem 1rem; border-bottom: 1px solid #1e2330; vertical-align: top; max-width: 420px; word-break: break-word; }
+    tr:hover td { background: #1a1f2e; }
+    .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .Critical { background: #7f1d1d; color: #fca5a5; }
+    .High     { background: #78350f; color: #fcd34d; }
+    .Medium   { background: #1e3a5f; color: #93c5fd; }
+    .Low      { background: #14532d; color: #86efac; }
+    .empty { text-align: center; color: #64748b; padding: 3rem; }
+    #status { font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+  <h1>Security Intelligence Aggregator</h1>
+  <p class="sub">CVE findings aggregated and classified by AI — auto-refreshes every 30s</p>
+
+  <div class="filters">
+    <select id="filterSeverity">
+      <option value="">All severities</option>
+      <option value="Critical">Critical</option>
+      <option value="High">High</option>
+      <option value="Medium">Medium</option>
+      <option value="Low">Low</option>
+    </select>
+    <input id="filterTopic" type="text" placeholder="Filter by topic..." />
+  </div>
+
+  <div id="status"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>CVE ID</th>
+        <th>Severity</th>
+        <th>Topic</th>
+        <th>Summary</th>
+        <th>Stored At</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    async function load() {
+      const severity = document.getElementById("filterSeverity").value;
+      const topic = document.getElementById("filterTopic").value;
+      const params = new URLSearchParams();
+      if (severity) params.set("severity", severity);
+      if (topic) params.set("topic", topic);
+
+      const res = await fetch(`/api/findings/?${params}`);
+      const data = await res.json();
+
+      const tbody = document.getElementById("tbody");
+      document.getElementById("status").textContent = `${data.length} finding(s) found`;
+
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty">No findings yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(f => `
+        <tr>
+          <td><code>${escHtml(f.id)}</code></td>
+          <td><span class="badge ${escHtml(f.severity)}">${escHtml(f.severity)}</span></td>
+          <td>${escHtml(f.topic)}</td>
+          <td>${escHtml(f.summary)}</td>
+          <td style="white-space:nowrap;color:#64748b">${new Date(f.stored_at).toLocaleString()}</td>
+        </tr>`).join("");
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    document.getElementById("filterSeverity").addEventListener("change", load);
+    document.getElementById("filterTopic").addEventListener("input", load);
+    load();
+    setInterval(load, 30000);
+  </script>
+</body>
+</html>
