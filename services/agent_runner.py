@@ -81,6 +81,10 @@ async def run_agent_async() -> list[dict]:
                     break
 
                 content = response.candidates[0].content
+                if not content or not content.parts:
+                    logger.warning("[RUNNER] Gemini returned empty content.")
+                    break
+
                 messages.append(content)
 
                 tool_calls = [p for p in content.parts if p.function_call]
